@@ -99,7 +99,41 @@ type RawData struct {
 	Acceleration float64
 }
 
-const interactionsPerPair = 10 // 每对节点每轮交互次数
+// 随机交互配置
+const (
+	// 交互概率配置（总和应为100）
+	NoInteractionProb      = 70 // 没有交互的概率：70%
+	OneInteractionProb     = 20 // 1次交互的概率：20%
+	MultiInteractionProb   = 10 // 多次交互的概率：10%
+	MaxInteractionsPerPair = 5  // 多次交互时的最大次数
+)
+
+// 恶意节点配置：设置哪些节点是恶意的
+var maliciousNodes = map[string]bool{
+	"3": true, // 将节点3设为恶意节点
+	// 可以添加更多恶意节点，例如: "7": true,
+}
+
+// 判断节点是否为恶意节点
+func isMalicious(nodeID string) bool {
+	return maliciousNodes[nodeID]
+}
+
+// getRandomInteractionCount 返回随机的交互次数
+// 70%概率返回0（没有交互）
+// 20%概率返回1（单次交互）
+// 10%概率返回2-5（多次交互）
+func getRandomInteractionCount() int {
+	r := rand.Intn(100)
+	if r < NoInteractionProb {
+		return 0 // 70%概率没有交互
+	} else if r < NoInteractionProb+OneInteractionProb {
+		return 1 // 20%概率1次交互
+	} else {
+		// 10%概率2-5次交互
+		return 2 + rand.Intn(MaxInteractionsPerPair-1)
+	}
+}
 
 func main() {
 
@@ -213,6 +247,21 @@ func main() {
 	log.Printf("总节点数: %d\n", len(vehicleIDs))
 	log.Printf("节点列表: %v\n", vehicleIDs)
 
+	// 统计恶意节点
+	var maliciousCount int
+	var maliciousList []string
+	var honestList []string
+	for _, vid := range vehicleIDs {
+		if isMalicious(vid) {
+			maliciousCount++
+			maliciousList = append(maliciousList, vid)
+		} else {
+			honestList = append(honestList, vid)
+		}
+	}
+	log.Printf("诚实节点 (%d个): %v\n", len(honestList), honestList)
+	log.Printf("恶意节点 (%d个): %v ⚠️\n", maliciousCount, maliciousList)
+
 	nodes := make(map[string]*Node)
 	for _, vid := range vehicleIDs {
 		nodes[vid] = NewNode(vid, cfg)
@@ -251,7 +300,25 @@ func main() {
 	rounds := len(trajMap[vehicleIDs[0]])
 	log.Printf("开始信誉交互模拟:\n")
 	log.Printf("总轮数: %d\n", rounds)
-	log.Printf("每对节点每轮交互次数: %d\n\n", interactionsPerPair)
+	log.Printf("评价模型:\n")
+	log.Printf("  📤 节点发送交易 → 📥 其他节点验证 → 📝 给发送者评价\n")
+	log.Printf("  ✅ 诚实节点发送正常交易 → 收到正面评价\n")
+	log.Printf("  ⚠️ 恶意节点发送恶意交易 → 收到负面评价\n")
+	log.Printf("交互频率:\n")
+	log.Printf("  ✅ 诚实节点: 随机交互（70%%概率无交互，20%%概率1次，10%%概率2-%d次）\n", MaxInteractionsPerPair)
+	log.Printf("  ⚠️ 恶意节点: 每轮固定1次交互\n")
+
+	// 显示初始信誉值
+	log.Printf("\n初始信誉值（交互前）:\n")
+	for _, vid := range vehicleIDs {
+		initialRepu := nodes[vid].Rm.ComputeReputation(vid, time.Now())
+		nodeType := "✅诚实"
+		if isMalicious(vid) {
+			nodeType = "⚠️恶意"
+		}
+		log.Printf("  节点 %s [%s]: %.2f\n", vid, nodeType, initialRepu)
+	}
+	log.Printf("\n")
 
 	interChan := make(chan reputation.Interaction)
 	var wg sync.WaitGroup
@@ -269,52 +336,136 @@ func main() {
 		reputationHistory[vid] = make([]float64, 0)
 	}
 
+	// 记录总交互次数
+	grandTotalInteractions := 0
+
 	for r := 0; r < rounds; r++ {
 		roundStartTime := time.Now()
 		proposer := nodes[vehicleIDs[r%len(vehicleIDs)]]
 		proposer.Propose([]byte(fmt.Sprintf("Round %d positions", r+1)))
 
-		// 记录本轮交互数量
+		// 记录本轮交互数量和统计信息
 		totalInteractions := 0
-		for _, from := range vehicleIDs {
-			for _, to := range vehicleIDs {
-				if from == to {
+		noInteractionCount := 0    // 没有交互的节点对数量
+		hasInteractionCount := 0   // 有交互的节点对数量
+		maliciousInteractions := 0 // 恶意节点发起的交互数量
+		honestInteractions := 0    // 诚实节点发起的交互数量
+
+		// 为每个恶意节点随机选择一个目标（每轮只发1个交易）
+		maliciousTargets := make(map[string]string) // sender -> receiver
+		for _, sender := range vehicleIDs {
+			if isMalicious(sender) {
+				// 随机选择一个不是自己的目标节点
+				possibleTargets := make([]string, 0)
+				for _, receiver := range vehicleIDs {
+					if receiver != sender {
+						possibleTargets = append(possibleTargets, receiver)
+					}
+				}
+				if len(possibleTargets) > 0 {
+					maliciousTargets[sender] = possibleTargets[rand.Intn(len(possibleTargets))]
+				}
+			}
+		}
+
+		// 遍历所有可能的发送者-接收者组合
+		for _, sender := range vehicleIDs {
+			for _, receiver := range vehicleIDs {
+				if sender == receiver {
 					continue
 				}
-				raw := dataMap[from][r]
+
+				// 决定本次交互的次数（发送者发送多少次交易）
+				var interactionCount int
+				if isMalicious(sender) {
+					// 恶意节点特殊处理：每轮只发1个交易到随机选中的目标
+					if target, exists := maliciousTargets[sender]; exists && target == receiver {
+						interactionCount = 1
+					} else {
+						interactionCount = 0
+					}
+				} else {
+					// 诚实节点：随机决定本次发送的交易次数
+					interactionCount = getRandomInteractionCount()
+				}
+
+				if interactionCount == 0 {
+					noInteractionCount++
+					continue // 本轮sender没有向receiver发送交易
+				}
+
+				hasInteractionCount++
+				raw := dataMap[sender][r]
 				baseTime := time.Now().Add(-time.Duration(raw.Time) * time.Second)
-				for k := 0; k < interactionsPerPair; k++ {
+
+				for k := 0; k < interactionCount; k++ {
 					delay := time.Duration(rand.Intn(500)) * time.Millisecond
 					ts := baseTime.Add(delay)
+
+					// 新逻辑：sender发送交易，receiver验证并评价sender
+					// From = receiver（评价者）
+					// To = sender（被评价者，交易发送者）
+					var posEvents, negEvents int
+					if isMalicious(sender) {
+						// 如果发送者是恶意节点，发送恶意交易，接收者识别后给负面评价
+						posEvents = 0
+						negEvents = 1
+					} else {
+						// 如果发送者是诚实节点，发送正常交易，接收者验证后给正面评价
+						posEvents = 1
+						negEvents = 0
+					}
+
 					inter := reputation.Interaction{
-						From:         from,
-						To:           to,
-						PosEvents:    1,
-						NegEvents:    0,
+						From:         receiver, // 评价者（接收并验证交易的节点）
+						To:           sender,   // 被评价者（发送交易的节点）
+						PosEvents:    posEvents,
+						NegEvents:    negEvents,
 						Timestamp:    ts,
-						TrajUser:     trajMap[from][:r+1],
-						TrajProvider: trajMap[to][:r+1],
+						TrajUser:     trajMap[receiver][:r+1], // 评价者的轨迹
+						TrajProvider: trajMap[sender][:r+1],   // 被评价者的轨迹
 					}
 					wg.Add(1)
 					interChan <- inter
 					totalInteractions++
+
+					// 统计恶意节点和诚实节点发送的交易数量
+					if isMalicious(sender) {
+						maliciousInteractions++
+					} else {
+						honestInteractions++
+					}
 				}
 			}
 		}
 		wg.Wait()
 
+		// 累加总交互次数
+		grandTotalInteractions += totalInteractions
+
 		// 输出信誉到控制台和日志
+		totalPairs := len(vehicleIDs) * (len(vehicleIDs) - 1)
+		interactionRate := float64(hasInteractionCount) / float64(totalPairs) * 100
+
 		log.Printf("========================================\n")
 		log.Printf("第 %d 轮信誉计算结果\n", r+1)
 		log.Printf("----------------------------------------\n")
 		log.Printf("提议者节点: %s\n", proposer.ID)
-		log.Printf("本轮交互总数: %d\n", totalInteractions)
+		log.Printf("本轮交互统计:\n")
+		log.Printf("  总交互次数: %d\n", totalInteractions)
+		log.Printf("    ├─ 诚实节点发送交易: %d 次（收到正面评价）\n", honestInteractions)
+		log.Printf("    └─ 恶意节点发送交易: %d 次（收到负面评价）⚠️\n", maliciousInteractions)
+		log.Printf("  有交互的节点对: %d/%d (%.1f%%)\n", hasInteractionCount, totalPairs, interactionRate)
+		log.Printf("  无交互的节点对: %d/%d (%.1f%%)\n", noInteractionCount, totalPairs, float64(noInteractionCount)/float64(totalPairs)*100)
 		log.Printf("----------------------------------------\n")
 
 		fmt.Printf("=== 第 %d 轮信誉计算 ===\n", r+1)
 
 		// 计算并记录每个节点的信誉值
 		var minRepu, maxRepu, sumRepu float64 = 1.0, 0.0, 0.0
+		var honestRepuSum, maliciousRepuSum float64
+		var honestCount, maliciousNodeCount int
+
 		for idx, vid := range vehicleIDs {
 			repu := nodes[vid].Rm.ComputeReputation(vid, time.Now())
 			reputationHistory[vid] = append(reputationHistory[vid], repu)
@@ -334,15 +485,26 @@ func main() {
 			}
 			sumRepu += repu
 
+			// 分类统计
+			nodeType := "✅诚实"
+			if isMalicious(vid) {
+				nodeType = "⚠️恶意"
+				maliciousRepuSum += repu
+				maliciousNodeCount++
+			} else {
+				honestRepuSum += repu
+				honestCount++
+			}
+
 			// 输出到控制台
-			fmt.Printf("节点 %s → 信誉值: %.4f\n", vid, repu)
+			fmt.Printf("节点 %s [%s] → 信誉值: %.4f\n", vid, nodeType, repu)
 
 			// 详细记录到日志
 			if change != 0 {
-				log.Printf("节点 %s: 信誉值=%.6f, 变化=%.6f (%.2f%%)\n",
-					vid, repu, change, change*100)
+				log.Printf("节点 %s [%s]: 信誉值=%.6f, 变化=%.6f (%.2f%%)\n",
+					vid, nodeType, repu, change, change*100)
 			} else {
-				log.Printf("节点 %s: 信誉值=%.6f (首次计算)\n", vid, repu)
+				log.Printf("节点 %s [%s]: 信誉值=%.6f (首次计算)\n", vid, nodeType, repu)
 			}
 
 			// 每5个节点换行一次以便阅读
@@ -358,6 +520,19 @@ func main() {
 		log.Printf("  最大信誉值: %.6f\n", maxRepu)
 		log.Printf("  平均信誉值: %.6f\n", avgRepu)
 		log.Printf("  信誉值范围: %.6f\n", maxRepu-minRepu)
+
+		// 对比诚实节点和恶意节点
+		if honestCount > 0 {
+			log.Printf("  诚实节点平均信誉: %.6f ✅\n", honestRepuSum/float64(honestCount))
+		}
+		if maliciousNodeCount > 0 {
+			log.Printf("  恶意节点平均信誉: %.6f ⚠️\n", maliciousRepuSum/float64(maliciousNodeCount))
+		}
+		if honestCount > 0 && maliciousNodeCount > 0 {
+			diff := (honestRepuSum / float64(honestCount)) - (maliciousRepuSum / float64(maliciousNodeCount))
+			log.Printf("  信誉差距: %.6f (诚实节点高出 %.2f%%)\n", diff, diff*100)
+		}
+
 		log.Printf("本轮耗时: %v\n", time.Since(roundStartTime))
 		log.Printf("========================================\n\n")
 	}
@@ -370,9 +545,9 @@ func main() {
 	log.Printf("║         信誉系统运行总结               ║\n")
 	log.Printf("╚════════════════════════════════════════╝\n")
 	log.Printf("总轮数: %d\n", rounds)
-	log.Printf("总节点数: %d\n", len(vehicleIDs))
-	log.Printf("总交互次数: %d\n", rounds*len(vehicleIDs)*(len(vehicleIDs)-1)*interactionsPerPair)
-	log.Printf("\n最终信誉值排名:\n")
+	log.Printf("总节点数: %d (诚实: %d, 恶意: %d)\n", len(vehicleIDs), len(honestList), len(maliciousList))
+	log.Printf("总交互次数: %d (随机交互模式)\n", grandTotalInteractions)
+	log.Printf("平均每轮交互次数: %.1f\n", float64(grandTotalInteractions)/float64(rounds))
 
 	// 创建排序数组
 	type NodeReputation struct {
@@ -380,16 +555,46 @@ func main() {
 		Reputation float64
 	}
 	var finalRanking []NodeReputation
+	var finalHonestSum, finalMaliciousSum float64
+	var finalHonestCount, finalMaliciousCount int
+
 	for _, vid := range vehicleIDs {
 		repu := nodes[vid].Rm.ComputeReputation(vid, time.Now())
 		finalRanking = append(finalRanking, NodeReputation{ID: vid, Reputation: repu})
+
+		if isMalicious(vid) {
+			finalMaliciousSum += repu
+			finalMaliciousCount++
+		} else {
+			finalHonestSum += repu
+			finalHonestCount++
+		}
 	}
 	sort.Slice(finalRanking, func(i, j int) bool {
 		return finalRanking[i].Reputation > finalRanking[j].Reputation
 	})
 
+	log.Printf("\n最终信誉值排名:\n")
 	for idx, nr := range finalRanking {
-		log.Printf("  第 %d 名: 节点 %s = %.6f\n", idx+1, nr.ID, nr.Reputation)
+		nodeType := "✅诚实"
+		if isMalicious(nr.ID) {
+			nodeType = "⚠️恶意"
+		}
+		log.Printf("  第 %d 名: 节点 %s [%s] = %.6f\n", idx+1, nr.ID, nodeType, nr.Reputation)
+	}
+
+	log.Printf("\n最终对比分析:\n")
+	if finalHonestCount > 0 {
+		log.Printf("  诚实节点最终平均信誉: %.6f ✅\n", finalHonestSum/float64(finalHonestCount))
+	}
+	if finalMaliciousCount > 0 {
+		log.Printf("  恶意节点最终平均信誉: %.6f ⚠️\n", finalMaliciousSum/float64(finalMaliciousCount))
+	}
+	if finalHonestCount > 0 && finalMaliciousCount > 0 {
+		finalDiff := (finalHonestSum / float64(finalHonestCount)) - (finalMaliciousSum / float64(finalMaliciousCount))
+		log.Printf("  最终信誉差距: %.6f\n", finalDiff)
+		log.Printf("  诚实节点信誉高出: %.2f%%\n", (finalDiff/(finalMaliciousSum/float64(finalMaliciousCount)))*100)
+		log.Printf("  ✅ 系统成功识别并惩罚了恶意节点！\n")
 	}
 
 	log.Printf("\n结束时间: %s\n", time.Now().Format("2006-01-02 15:04:05"))

@@ -38,6 +38,9 @@ type DirectOpinion struct {
 	Weight  float64           // 直接权重 δ
 }
 
+// 初始信誉值常量
+const InitialReputation = 0.5
+
 // ReputationManager 管理信誉计算
 type ReputationManager struct {
 	cfg          config.Config
@@ -57,6 +60,12 @@ func (rm *ReputationManager) AddInteraction(inter Interaction) {
 // ComputeReputation 计算最终信誉值
 func (rm *ReputationManager) ComputeReputation(target string, now time.Time) float64 {
 	agg := rm.aggregateByPair()
+
+	// 如果目标节点没有任何交互记录，返回初始信誉值
+	if _, exists := agg[target]; !exists {
+		return InitialReputation
+	}
+
 	direct := rm.computeDirectOpinions(agg, now)
 	indirect := rm.computeIndirectOpinions(direct)
 	final := rm.fuseOpinions(direct[target], indirect[target])
@@ -122,9 +131,11 @@ func (rm *ReputationManager) computeDirectOpinions(
 			}
 			sim := rm.computeTrajectorySimilarity(inter.TrajUser, inter.TrajProvider)
 			weight := rm.cfg.Rho1*Fi + rm.cfg.Rho2*TIM + rm.cfg.Rho3*sim
-			Ii := 1 - math.Log(1+sim)
+			// 修改：不确定度由交互次数决定，而不是轨迹相似度
+			totalEvents := float64(inter.PosEvents + inter.NegEvents)
+			Ii := 2.0 / (2.0 + totalEvents)
 			// 调试输出
-			fmt.Printf("DEBUG Direct: to=%s from=%s delta=%.3f TIM=%.3f sim=%.3f weight=%.3f Ii=%.3f\n", to, from, delta, TIM, sim, weight, Ii)
+			fmt.Printf("DEBUG Direct: to=%s from=%s delta=%.3f TIM=%.3f sim=%.3f weight=%.3f totalEvents=%.0f Ii=%.3f\n", to, from, delta, TIM, sim, weight, totalEvents, Ii)
 			tmp[from] = DirectOpinion{Opinion: SubjectiveOpinion{I: Ii}, Weight: weight}
 			errNum += weight * float64(inter.NegEvents)
 			errDen += weight
