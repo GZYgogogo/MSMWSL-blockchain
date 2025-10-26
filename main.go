@@ -417,13 +417,15 @@ func main() {
 					}
 
 					inter := reputation.Interaction{
-						From:         receiver, // 评价者（接收并验证交易的节点）
-						To:           sender,   // 被评价者（发送交易的节点）
-						PosEvents:    posEvents,
-						NegEvents:    negEvents,
-						Timestamp:    ts,
-						TrajUser:     trajMap[receiver][:r+1], // 评价者的轨迹
-						TrajProvider: trajMap[sender][:r+1],   // 被评价者的轨迹
+						From:          receiver, // 评价者（接收并验证交易的节点）
+						To:            sender,   // 被评价者（发送交易的节点）
+						PosEvents:     posEvents,
+						NegEvents:     negEvents,
+						Timestamp:     ts,
+						TrajUser:      trajMap[receiver][:r+1],      // 评价者的轨迹
+						TrajProvider:  trajMap[sender][:r+1],        // 被评价者的轨迹
+						TxType:        reputation.NormalTransaction, // ⭐ 标记为普通交易
+						UrgencyDegree: 0.0,                          // 普通交易无紧急度
 					}
 					wg.Add(1)
 					interChan <- inter

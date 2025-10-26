@@ -14,15 +14,25 @@ type Vector struct {
 	Acceleration float64
 }
 
+// TransactionType 交易类型
+type TransactionType int
+
+const (
+	NormalTransaction    TransactionType = iota // 普通交易
+	EmergencyTransaction                        // 紧急交易
+)
+
 // Interaction 表示一次交互事件
 type Interaction struct {
-	From         string    // 交互发起者
-	To           string    // 交互接收者
-	PosEvents    int       // 正面事件数量
-	NegEvents    int       // 负面事件数量
-	Timestamp    time.Time // 事件发生时间
-	TrajUser     []Vector  // 信任者轨迹
-	TrajProvider []Vector  // 被信任者轨迹
+	From          string          // 交互发起者
+	To            string          // 交互接收者
+	PosEvents     int             // 正面事件数量
+	NegEvents     int             // 负面事件数量
+	Timestamp     time.Time       // 事件发生时间
+	TrajUser      []Vector        // 信任者轨迹
+	TrajProvider  []Vector        // 被信任者轨迹
+	TxType        TransactionType // 交易类型（普通/紧急）
+	UrgencyDegree float64         // 紧急度（仅紧急交易有效）
 }
 
 // SubjectiveOpinion 主观意见三元组
@@ -41,6 +51,21 @@ type DirectOpinion struct {
 // 初始信誉值常量
 const InitialReputation = 0.5
 
+// 信誉影响权重常量
+const (
+	// 普通交易的基础权重
+	NormalTxWeight = 1.0
+
+	// 紧急交易的基础权重（是普通交易的3倍，提升惩罚力度）
+	EmergencyTxBaseWeight = 3.0
+
+	// 紧急度影响系数（紧急度越高，影响越大，提升至0.8加强效果）
+	UrgencyImpactFactor = 0.8
+
+	// 最大权重倍数（提升至8.0，加强对恶意节点的惩罚）
+	MaxWeightMultiplier = 8.0
+)
+
 // ReputationManager 管理信誉计算
 type ReputationManager struct {
 	cfg          config.Config
@@ -55,6 +80,36 @@ func NewReputationManager(cfg config.Config) *ReputationManager {
 // AddInteraction 添加交互记录
 func (rm *ReputationManager) AddInteraction(inter Interaction) {
 	rm.interactions = append(rm.interactions, inter)
+}
+
+// CalculateTransactionWeight 计算交易类型对信誉的影响权重
+// 公式设计：
+// - 普通交易: W = 1.0
+// - 紧急交易: W = EmergencyTxBaseWeight × (1 + UrgencyImpactFactor × UrgencyDegree)
+// - 上限约束: W ≤ MaxWeightMultiplier
+func CalculateTransactionWeight(txType TransactionType, urgencyDegree float64) float64 {
+	var weight float64
+
+	switch txType {
+	case NormalTransaction:
+		// 普通交易基础权重
+		weight = NormalTxWeight
+
+	case EmergencyTransaction:
+		// 紧急交易权重 = 基础权重 × (1 + 紧急度影响)
+		// 紧急度越高，权重越大
+		weight = EmergencyTxBaseWeight * (1.0 + UrgencyImpactFactor*urgencyDegree)
+
+		// 应用上限约束
+		if weight > MaxWeightMultiplier {
+			weight = MaxWeightMultiplier
+		}
+
+	default:
+		weight = NormalTxWeight
+	}
+
+	return weight
 }
 
 // ComputeReputation 计算最终信誉值
@@ -130,12 +185,28 @@ func (rm *ReputationManager) computeDirectOpinions(
 				TIM = rm.cfg.Eta * math.Pow(delta, -rm.cfg.Epsilon)
 			}
 			sim := rm.computeTrajectorySimilarity(inter.TrajUser, inter.TrajProvider)
-			weight := rm.cfg.Rho1*Fi + rm.cfg.Rho2*TIM + rm.cfg.Rho3*sim
+
+			// 原始权重计算
+			baseWeight := rm.cfg.Rho1*Fi + rm.cfg.Rho2*TIM + rm.cfg.Rho3*sim
+
+			// ⭐ 新增：计算交易类型影响权重
+			txWeight := CalculateTransactionWeight(inter.TxType, inter.UrgencyDegree)
+
+			// ⭐ 最终权重 = 原始权重 × 交易类型权重
+			weight := baseWeight * txWeight
+
 			// 修改：不确定度由交互次数决定，而不是轨迹相似度
 			totalEvents := float64(inter.PosEvents + inter.NegEvents)
 			Ii := 2.0 / (2.0 + totalEvents)
-			// 调试输出
-			fmt.Printf("DEBUG Direct: to=%s from=%s delta=%.3f TIM=%.3f sim=%.3f weight=%.3f totalEvents=%.0f Ii=%.3f\n", to, from, delta, TIM, sim, weight, totalEvents, Ii)
+
+			// 调试输出（增加交易类型和权重信息）
+			txTypeStr := "Normal"
+			if inter.TxType == EmergencyTransaction {
+				txTypeStr = "Emergency"
+			}
+			fmt.Printf("DEBUG Direct: to=%s from=%s delta=%.3f TIM=%.3f sim=%.3f baseWeight=%.3f txType=%s txWeight=%.3f finalWeight=%.3f totalEvents=%.0f Ii=%.3f\n",
+				to, from, delta, TIM, sim, baseWeight, txTypeStr, txWeight, weight, totalEvents, Ii)
+
 			tmp[from] = DirectOpinion{Opinion: SubjectiveOpinion{I: Ii}, Weight: weight}
 			errNum += weight * float64(inter.NegEvents)
 			errDen += weight
