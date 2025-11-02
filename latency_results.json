@@ -1,0 +1,290 @@
+[
+  {
+    "BlockPeriod(ms)": 300,
+    "TxCount": 500,
+    "ChainType": "normal",
+    "AvgLatency(ms)": 301.39,
+    "MinLatency(ms)": 291.14,
+    "MaxLatency(ms)": 314.14,
+    "Throughput(tx/s)": 1666.5
+  },
+  {
+    "BlockPeriod(ms)": 300,
+    "TxCount": 500,
+    "ChainType": "emergency",
+    "AvgLatency(ms)": 148.34,
+    "MinLatency(ms)": 139.66,
+    "MaxLatency(ms)": 156.72,
+    "Throughput(tx/s)": 3333.0
+  },
+  {
+    "BlockPeriod(ms)": 300,
+    "TxCount": 1000,
+    "ChainType": "normal",
+    "AvgLatency(ms)": 303.92,
+    "MinLatency(ms)": 293.05,
+    "MaxLatency(ms)": 318.14,
+    "Throughput(tx/s)": 3333.0
+  },
+  {
+    "BlockPeriod(ms)": 300,
+    "TxCount": 1000,
+    "ChainType": "emergency",
+    "AvgLatency(ms)": 147.18,
+    "MinLatency(ms)": 141.09,
+    "MaxLatency(ms)": 154.71,
+    "Throughput(tx/s)": 6666.5
+  },
+  {
+    "BlockPeriod(ms)": 300,
+    "TxCount": 1500,
+    "ChainType": "normal",
+    "AvgLatency(ms)": 295.27,
+    "MinLatency(ms)": 283.28,
+    "MaxLatency(ms)": 311.76,
+    "Throughput(tx/s)": 5000.0
+  },
+  {
+    "BlockPeriod(ms)": 300,
+    "TxCount": 1500,
+    "ChainType": "emergency",
+    "AvgLatency(ms)": 150.27,
+    "MinLatency(ms)": 144.17,
+    "MaxLatency(ms)": 158.22,
+    "Throughput(tx/s)": 10000.0
+  },
+  {
+    "BlockPeriod(ms)": 300,
+    "TxCount": 2000,
+    "ChainType": "normal",
+    "AvgLatency(ms)": 303.09,
+    "MinLatency(ms)": 293.03,
+    "MaxLatency(ms)": 321.15,
+    "Throughput(tx/s)": 6666.5
+  },
+  {
+    "BlockPeriod(ms)": 300,
+    "TxCount": 2000,
+    "ChainType": "emergency",
+    "AvgLatency(ms)": 151.19,
+    "MinLatency(ms)": 144.49,
+    "MaxLatency(ms)": 156.97,
+    "Throughput(tx/s)": 13333.0
+  },
+  {
+    "BlockPeriod(ms)": 600,
+    "TxCount": 500,
+    "ChainType": "normal",
+    "AvgLatency(ms)": 604.57,
+    "MinLatency(ms)": 591.21,
+    "MaxLatency(ms)": 615.5,
+    "Throughput(tx/s)": 833.0
+  },
+  {
+    "BlockPeriod(ms)": 600,
+    "TxCount": 500,
+    "ChainType": "emergency",
+    "AvgLatency(ms)": 297.58,
+    "MinLatency(ms)": 288.34,
+    "MaxLatency(ms)": 305.6,
+    "Throughput(tx/s)": 1666.5
+  },
+  {
+    "BlockPeriod(ms)": 600,
+    "TxCount": 1000,
+    "ChainType": "normal",
+    "AvgLatency(ms)": 603.07,
+    "MinLatency(ms)": 585.77,
+    "MaxLatency(ms)": 618.43,
+    "Throughput(tx/s)": 1666.5
+  },
+  {
+    "BlockPeriod(ms)": 600,
+    "TxCount": 1000,
+    "ChainType": "emergency",
+    "AvgLatency(ms)": 302.84,
+    "MinLatency(ms)": 295.95,
+    "MaxLatency(ms)": 310.6,
+    "Throughput(tx/s)": 3333.0
+  },
+  {
+    "BlockPeriod(ms)": 600,
+    "TxCount": 1500,
+    "ChainType": "normal",
+    "AvgLatency(ms)": 603.29,
+    "MinLatency(ms)": 587.11,
+    "MaxLatency(ms)": 621.91,
+    "Throughput(tx/s)": 2500.0
+  },
+  {
+    "BlockPeriod(ms)": 600,
+    "TxCount": 1500,
+    "ChainType": "emergency",
+    "AvgLatency(ms)": 300.46,
+    "MinLatency(ms)": 291.94,
+    "MaxLatency(ms)": 305.69,
+    "Throughput(tx/s)": 5000.0
+  },
+  {
+    "BlockPeriod(ms)": 600,
+    "TxCount": 2000,
+    "ChainType": "normal",
+    "AvgLatency(ms)": 597.28,
+    "MinLatency(ms)": 584.39,
+    "MaxLatency(ms)": 608.08,
+    "Throughput(tx/s)": 3333.0
+  },
+  {
+    "BlockPeriod(ms)": 600,
+    "TxCount": 2000,
+    "ChainType": "emergency",
+    "AvgLatency(ms)": 298.4,
+    "MinLatency(ms)": 292.89,
+    "MaxLatency(ms)": 304.79,
+    "Throughput(tx/s)": 6666.5
+  },
+  {
+    "BlockPeriod(ms)": 900,
+    "TxCount": 500,
+    "ChainType": "normal",
+    "AvgLatency(ms)": 901.36,
+    "MinLatency(ms)": 887.71,
+    "MaxLatency(ms)": 915.06,
+    "Throughput(tx/s)": 555.5
+  },
+  {
+    "BlockPeriod(ms)": 900,
+    "TxCount": 500,
+    "ChainType": "emergency",
+    "AvgLatency(ms)": 448.26,
+    "MinLatency(ms)": 441.92,
+    "MaxLatency(ms)": 457.94,
+    "Throughput(tx/s)": 1111.0
+  },
+  {
+    "BlockPeriod(ms)": 900,
+    "TxCount": 1000,
+    "ChainType": "normal",
+    "AvgLatency(ms)": 901.48,
+    "MinLatency(ms)": 885.39,
+    "MaxLatency(ms)": 913.19,
+    "Throughput(tx/s)": 1111.0
+  },
+  {
+    "BlockPeriod(ms)": 900,
+    "TxCount": 1000,
+    "ChainType": "emergency",
+    "AvgLatency(ms)": 451.37,
+    "MinLatency(ms)": 445.56,
+    "MaxLatency(ms)": 458.27,
+    "Throughput(tx/s)": 2222.0
+  },
+  {
+    "BlockPeriod(ms)": 900,
+    "TxCount": 1500,
+    "ChainType": "normal",
+    "AvgLatency(ms)": 904.9,
+    "MinLatency(ms)": 888.5,
+    "MaxLatency(ms)": 920.46,
+    "Throughput(tx/s)": 1666.5
+  },
+  {
+    "BlockPeriod(ms)": 900,
+    "TxCount": 1500,
+    "ChainType": "emergency",
+    "AvgLatency(ms)": 451.11,
+    "MinLatency(ms)": 441.89,
+    "MaxLatency(ms)": 459.99,
+    "Throughput(tx/s)": 3333.0
+  },
+  {
+    "BlockPeriod(ms)": 900,
+    "TxCount": 2000,
+    "ChainType": "normal",
+    "AvgLatency(ms)": 897.29,
+    "MinLatency(ms)": 886.97,
+    "MaxLatency(ms)": 910.45,
+    "Throughput(tx/s)": 2222.0
+  },
+  {
+    "BlockPeriod(ms)": 900,
+    "TxCount": 2000,
+    "ChainType": "emergency",
+    "AvgLatency(ms)": 448.61,
+    "MinLatency(ms)": 442.55,
+    "MaxLatency(ms)": 458.32,
+    "Throughput(tx/s)": 4444.0
+  },
+  {
+    "BlockPeriod(ms)": 1200,
+    "TxCount": 500,
+    "ChainType": "normal",
+    "AvgLatency(ms)": 1203.76,
+    "MinLatency(ms)": 1190.62,
+    "MaxLatency(ms)": 1220.32,
+    "Throughput(tx/s)": 416.5
+  },
+  {
+    "BlockPeriod(ms)": 1200,
+    "TxCount": 500,
+    "ChainType": "emergency",
+    "AvgLatency(ms)": 599.37,
+    "MinLatency(ms)": 589.8,
+    "MaxLatency(ms)": 606.67,
+    "Throughput(tx/s)": 833.0
+  },
+  {
+    "BlockPeriod(ms)": 1200,
+    "TxCount": 1000,
+    "ChainType": "normal",
+    "AvgLatency(ms)": 1197.65,
+    "MinLatency(ms)": 1185.18,
+    "MaxLatency(ms)": 1213.26,
+    "Throughput(tx/s)": 833.0
+  },
+  {
+    "BlockPeriod(ms)": 1200,
+    "TxCount": 1000,
+    "ChainType": "emergency",
+    "AvgLatency(ms)": 598.58,
+    "MinLatency(ms)": 590.65,
+    "MaxLatency(ms)": 608.07,
+    "Throughput(tx/s)": 1666.5
+  },
+  {
+    "BlockPeriod(ms)": 1200,
+    "TxCount": 1500,
+    "ChainType": "normal",
+    "AvgLatency(ms)": 1198.99,
+    "MinLatency(ms)": 1186.8,
+    "MaxLatency(ms)": 1218.97,
+    "Throughput(tx/s)": 1250.0
+  },
+  {
+    "BlockPeriod(ms)": 1200,
+    "TxCount": 1500,
+    "ChainType": "emergency",
+    "AvgLatency(ms)": 600.06,
+    "MinLatency(ms)": 594.6,
+    "MaxLatency(ms)": 605.29,
+    "Throughput(tx/s)": 2500.0
+  },
+  {
+    "BlockPeriod(ms)": 1200,
+    "TxCount": 2000,
+    "ChainType": "normal",
+    "AvgLatency(ms)": 1196.1,
+    "MinLatency(ms)": 1179.82,
+    "MaxLatency(ms)": 1214.02,
+    "Throughput(tx/s)": 1666.5
+  },
+  {
+    "BlockPeriod(ms)": 1200,
+    "TxCount": 2000,
+    "ChainType": "emergency",
+    "AvgLatency(ms)": 599.53,
+    "MinLatency(ms)": 594.22,
+    "MaxLatency(ms)": 606.44,
+    "Throughput(tx/s)": 3333.0
+  }
+]

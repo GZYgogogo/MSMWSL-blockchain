@@ -33,6 +33,18 @@ func NewValidatorGroup(groupSize int, activePeriod int) *ValidatorGroup {
 	}
 }
 
+// SetValidators 直接设置验证器节点列表（用于测试）
+func (vg *ValidatorGroup) SetValidators(validatorIDs []string) {
+	vg.Validators = make([]*Validator, len(validatorIDs))
+	for i, id := range validatorIDs {
+		vg.Validators[i] = &Validator{
+			ID:         id,
+			Reputation: 0.8, // 默认信誉值
+		}
+	}
+	vg.GroupSize = len(validatorIDs)
+}
+
 // SelectValidators 根据信誉值选取验证器节点
 // 选取信誉值最高的 groupSize 个节点作为验证器节点
 func (vg *ValidatorGroup) SelectValidators(

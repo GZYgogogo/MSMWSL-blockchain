@@ -2,6 +2,7 @@ package emergency
 
 import (
 	"math"
+	"sync"
 	"time"
 )
 
@@ -82,6 +83,7 @@ func NewEmergencyTransaction(
 // TransactionPool 交易池，用于存储待处理的紧急交易
 type TransactionPool struct {
 	transactions []*EmergencyTransaction
+	mu           sync.Mutex
 }
 
 // NewTransactionPool 创建新的交易池
@@ -93,11 +95,16 @@ func NewTransactionPool() *TransactionPool {
 
 // AddTransaction 添加交易到交易池
 func (pool *TransactionPool) AddTransaction(tx *EmergencyTransaction) {
+	pool.mu.Lock()
+	defer pool.mu.Unlock()
 	pool.transactions = append(pool.transactions, tx)
 }
 
 // GetTopKTransactions 获取紧急度最高的 k 笔交易
 func (pool *TransactionPool) GetTopKTransactions(k int) []*EmergencyTransaction {
+	pool.mu.Lock()
+	defer pool.mu.Unlock()
+	
 	if len(pool.transactions) == 0 {
 		return nil
 	}
@@ -109,7 +116,8 @@ func (pool *TransactionPool) GetTopKTransactions(k int) []*EmergencyTransaction 
 	// 简单冒泡排序（实际应用中可使用更高效的排序算法）
 	for i := 0; i < len(sorted)-1; i++ {
 		for j := 0; j < len(sorted)-i-1; j++ {
-			if sorted[j].UrgencyDegree < sorted[j+1].UrgencyDegree {
+			// 添加nil检查
+			if sorted[j] != nil && sorted[j+1] != nil && sorted[j].UrgencyDegree < sorted[j+1].UrgencyDegree {
 				sorted[j], sorted[j+1] = sorted[j+1], sorted[j]
 			}
 		}
@@ -122,24 +130,33 @@ func (pool *TransactionPool) GetTopKTransactions(k int) []*EmergencyTransaction 
 
 	result := sorted[:k]
 
-	// 从交易池中移除已选中的交易
-	pool.RemoveTransactions(result)
+	// 从交易池中移除已选中的交易（不加锁，因为已经在锁内）
+	pool.removeTransactionsNoLock(result)
 
 	return result
 }
 
 // RemoveTransactions 从交易池中移除指定的交易
 func (pool *TransactionPool) RemoveTransactions(txs []*EmergencyTransaction) {
+	pool.mu.Lock()
+	defer pool.mu.Unlock()
+	pool.removeTransactionsNoLock(txs)
+}
+
+// removeTransactionsNoLock 从交易池中移除指定的交易（无锁版本，内部使用）
+func (pool *TransactionPool) removeTransactionsNoLock(txs []*EmergencyTransaction) {
 	// 创建一个 map 用于快速查找
 	toRemove := make(map[string]bool)
 	for _, tx := range txs {
-		toRemove[tx.ID] = true
+		if tx != nil {
+			toRemove[tx.ID] = true
+		}
 	}
 
 	// 保留未被移除的交易
 	newTransactions := make([]*EmergencyTransaction, 0)
 	for _, tx := range pool.transactions {
-		if !toRemove[tx.ID] {
+		if tx != nil && !toRemove[tx.ID] {
 			newTransactions = append(newTransactions, tx)
 		}
 	}
@@ -149,5 +166,7 @@ func (pool *TransactionPool) RemoveTransactions(txs []*EmergencyTransaction) {
 
 // Size 返回交易池大小
 func (pool *TransactionPool) Size() int {
+	pool.mu.Lock()
+	defer pool.mu.Unlock()
 	return len(pool.transactions)
 }
